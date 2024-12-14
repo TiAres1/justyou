@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Message Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
+    <style>
+        .container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100">
+    <div class="container mx-auto p-4 flex justify-center">
+        <!-- Dashboard View -->
+        <div class="w-full bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-2xl font-bold mb-6">وش بتكتب؟</h2>
+            <div class="space-y-4">
+                <input type="text" id="dashboardMessage" class="w-full p-2 border rounded" placeholder="فكر فكر">
+                <div id="timeDisplay" class="w-full p-2 border rounded bg-gray-50"></div>
+                <button id="addBtn" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">روح</button>
+                <div id="messagesList" class="mt-4 space-y-2"></div>
+                <button id="deleteBtn"
+                    class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 hidden">طير</button>
+                <button id="cancelBtn"
+                    class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 hidden">كنسل</button>
+                <button id="reAddBtn"
+                    class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 hidden">رجعها</button>
+            </div>
+            <div class="mt-8">
+                <h3 class="text-xl font-bold mb-4">مين قاعد يشوف؟</h3>
+                <div id="viewersList" class="space-y-2"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBkx13UA9elpV237vMGIu6rm4ZCeEM4afU",
+            authDomain: "absolute-bonsai-349616.firebaseapp.com",
+            databaseURL: "https://absolute-bonsai-349616-default-rtdb.firebaseio.com",
+            projectId: "absolute-bonsai-349616",
+            storageBucket: "absolute-bonsai-349616.appspot.com",
+            messagingSenderId: "192867768515",
+            appId: "1:192867768515:web:6200aed1a39666e1deaa76",
+            measurementId: "G-MLW07L90BJ"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        let messages = [];
+        let currentMessageIndex = null;
+        const timeDisplay = document.getElementById('timeDisplay');
+        const dashboardMessage = document.getElementById('dashboardMessage');
+        const messagesList = document.getElementById('messagesList');
+        const deleteBtn = document.getElementById('deleteBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const reAddBtn = document.getElementById('reAddBtn');
+        const addBtn = document.getElementById('addBtn');
+        const viewersList = document.getElementById('viewersList');
+
+        // Update time
+        setInterval(() => {
+            timeDisplay.textContent = new Date().toLocaleTimeString('ar-SA');
+        }, 1000);
+
+        // Add message
+        addBtn.addEventListener('click', () => {
+            const message = dashboardMessage.value;
+            if (message) {
+                const time = new Date().toLocaleString('ar-SA');
+                const newMessage = {
+                    text: message,
+                    time: time
+                };
+                messages.unshift(newMessage);
+                updateMessagesList();
+                dashboardMessage.value = '';
+
+                // Store the message in Firebase Realtime Database
+                database.ref('messages').set(messages);
+            }
+        });
+
+        function updateMessagesList() {
+            messagesList.innerHTML = messages.map((msg, idx) => `
+                <div class="p-3 bg-gray-50 rounded ${idx === 0 ? 'border-2 border-blue-500' : ''}">
+                    <div class="font-bold">${msg.text}</div>
+                    <div class="text-sm text-gray-500">${msg.time}</div>
+                    <button class="text-blue-500 hover:text-blue-700 edit-btn" data-index="${idx}">تعديل</button>
+                </div>
+            `).join('');
+        }
+
+        // Load messages from Firebase Realtime Database
+        database.ref('messages').on('value', (snapshot) => {
+            messages = snapshot.val() || [];
+            updateMessagesList();
+        });
+
+        // Edit message
+        messagesList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('edit-btn')) {
+                const index = e.target.getAttribute('data-index');
+                const message = messages[index];
+                dashboardMessage.value = message.text;
+                currentMessageIndex = index;
+                messages.splice(index, 1);
+                updateMessagesList();
+                cancelBtn.classList.remove('hidden');
+                deleteBtn.classList.remove('hidden');
+                reAddBtn.classList.remove('hidden');
+                addBtn.classList.add('hidden');
+            }
+        });
+
+        // Delete message
+        deleteBtn.addEventListener('click', () => {
+            const message = dashboardMessage.value;
+            messages = messages.filter(msg => msg.text !== message);
+            updateMessagesList();
+            dashboardMessage.value = '';
+            deleteBtn.classList.add('hidden');
+            reAddBtn.classList.add('hidden');
+            cancelBtn.classList.add('hidden');
+            addBtn.classList.remove('hidden');
+
+            // Update Firebase Realtime Database
+            database.ref('messages').set(messages);
+        });
+
+        // Re-add message
+        reAddBtn.addEventListener('click', () => {
+            const message = dashboardMessage.value;
+            if (message) {
+                const time = new Date().toLocaleString('ar-SA');
+                const newMessage = {
+                    text: message,
+                    time: time
+                };
+                messages.unshift(newMessage);
+                updateMessagesList();
+                dashboardMessage.value = '';
+                deleteBtn.classList.add('hidden');
+                reAddBtn.classList.add('hidden');
+                cancelBtn.classList.add('hidden');
+                addBtn.classList.remove('hidden');
+
+                // Store the message in Firebase Realtime Database
+                database.ref('messages').set(messages);
+            }
+        });
+
+        // Cancel edit
+        cancelBtn.addEventListener('click', () => {
+            if (currentMessageIndex !== null) {
+                const message = dashboardMessage.value;
+                const time = new Date().toLocaleString('ar-SA');
+                const newMessage = {
+                    text: message,
+                    time: time
+                };
+                messages.splice(currentMessageIndex, 0, newMessage);
+                updateMessagesList();
+                currentMessageIndex = null;
+            }
+            dashboardMessage.value = '';
+            deleteBtn.classList.add('hidden');
+            reAddBtn.classList.add('hidden');
+            cancelBtn.classList.add('hidden');
+            addBtn.classList.remove('hidden');
+
+            // messagesList.querySelectorAll('.border-2').forEach(el => el.classList.remove('border-2', 'border-blue-500'));
+        });
+
+        function updateViewersList(viewers) {
+            const sortedViewers = Object.values(viewers).sort((a, b) => b.count - a.count).slice(0, 3);
+            viewersList.innerHTML = sortedViewers.map(viewer => {
+                let message = '';
+                if (viewer.count > 20) {
+                    message = 'وش سويت فيه 🤨!';
+                } else if (viewer.count > 19) {
+                    message = 'لا صدق يحبّك 😰!';
+                } else if (viewer.count > 9) {
+                    message = 'لا مهووس 😳!';
+                } else if (viewer.count > 4) {
+                    message = 'شكله معجب 😆!';
+                }
+                return `
+                    <div class="p-3 bg-gray-50 rounded">
+                        <div class="font-bold">الجهاز: ${viewer.userAgent}</div>
+                        <div class="text-sm text-gray-500">منصته: ${viewer.platform}</div>
+                        <div class="text-sm text-gray-500">اللغة: ${viewer.language}</div>
+                        <div class="text-sm text-gray-500">كم مره جاء: ${viewer.count} ${message}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Load viewers from Firebase Realtime Database
+        database.ref('viewers').on('value', (snapshot) => {
+            const viewers = snapshot.val() || {};
+            updateViewersList(viewers);
+        });
+    </script>
+</body>
+
+</html>
