@@ -38,11 +38,11 @@
                 <button id="showMessagesBtn" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 hidden">وريني رسايلي</button>
                 <button id="hideMessagesBtn" class="text-white px-4 py-2 rounded hover:bg-blue-600 hidden">خلاص شفتها</button>
             </div>
+            <div id="allMessages" class="hidden mt-4 space-y-2"></div>
             <div class="mt-8">
                 <h3 id="viewersTitle" class="text-xl font-bold mb-4">مين قاعد يشوف؟</h3>
                 <div id="viewersList" class="space-y-2"></div>
             </div>
-            <div id="allMessages" class="hidden mt-4 space-y-2"></div>
         </div>
     </div>
 
@@ -105,27 +105,32 @@
         function updateMessagesList() {
             latestMessage.innerHTML = '';
             allMessages.innerHTML = '';
+
             if (messages.length > 0) {
                 const latest = messages[0];
                 latestMessage.innerHTML = `
                     <div class="p-3 bg-gray-50 rounded border-2 border-blue-500">
                         <div class="font-bold">${latest.text}</div>
                         <div class="text-sm text-gray-500">${latest.time}</div>
-                        <button class="text-blue-500 hover:text-blue-700 edit-btn" data-index="0">تعديل</button>
+                        <button class="edit-btn text-blue-500" data-index="0">تعديل</button>
                     </div>
                 `;
                 if (messages.length > 1) {
                     showMessagesBtn.classList.remove('hidden');
-                    allMessages.innerHTML = messages.slice(1).map((msg, idx) => `
-                        <div class="p-3 bg-gray-50 rounded">
+                    allMessages.innerHTML = messages.slice(1).map((msg) => `
+                        <div class="p-3 bg-gray-50 rounded border-2 border-silver-500">
                             <div class="font-bold">${msg.text}</div>
                             <div class="text-sm text-gray-500">${msg.time}</div>
-                            <button id="cancelBtnLastMessage" class="text-blue-500 hover:text-blue-700 edit-btn" data-index="${idx + 1}">تعديل</button>
+                            <button class="edit-btn text-blue-500" data-index="${messages.indexOf(msg)}">تعديل</button> 
                         </div>
                     `).join('');
                 } else {
                     showMessagesBtn.classList.add('hidden');
+                    hideMessagesBtn.classList.add('hidden');
                 }
+            } else {
+                showMessagesBtn.classList.add('hidden');
+                hideMessagesBtn.classList.add('hidden');
             }
         }
 
@@ -136,22 +141,15 @@
         });
 
         showMessagesBtn.addEventListener('click', () => {
-            viewersTitle.classList.add('hidden');
-            viewersList.classList.add('hidden');
             allMessages.classList.remove('hidden');
             hideMessagesBtn.classList.remove('hidden');
             showMessagesBtn.classList.add('hidden');
         });
 
         hideMessagesBtn.addEventListener('click', () => {
-            viewersTitle.classList.remove('hidden');
-            viewersList.classList.remove('hidden');
             allMessages.classList.add('hidden');
             hideMessagesBtn.classList.add('hidden');
             showMessagesBtn.classList.remove('hidden');
-            deleteBtn.classList.add('hidden');
-            cancelBtn.classList.add('hidden');
-            reAddBtn.classList.add('hidden');
         });
 
         // Edit message
@@ -167,6 +165,8 @@
                 deleteBtn.classList.remove('hidden');
                 reAddBtn.classList.remove('hidden');
                 addBtn.classList.add('hidden');
+                showMessagesBtn.classList.add('hidden');
+                hideMessagesBtn.classList.add('hidden');
             }
         });
 
@@ -183,6 +183,7 @@
                 reAddBtn.classList.remove('hidden');
                 addBtn.classList.add('hidden');
                 hideMessagesBtn.classList.add('hidden');
+                showMessagesBtn.classList.add('hidden');
             }
         });
 
@@ -196,6 +197,8 @@
             reAddBtn.classList.add('hidden');
             cancelBtn.classList.add('hidden');
             addBtn.classList.remove('hidden');
+            viewersList.classList.remove('hidden');
+            viewersTitle.classList.remove('hidden');
 
             // Update Firebase Realtime Database
             database.ref('messages').set(messages);
