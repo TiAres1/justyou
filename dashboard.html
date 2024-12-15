@@ -10,12 +10,14 @@
     <script src="https://www.gstatic.com/firebasejs/9.1.3/firebase-database-compat.js"></script>
     <style>
         .container {
-            /* position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%); */
             overflow-y: auto;
             max-height: 100vh;
+        }
+        #reAddBtn {
+            background-color: #42f58d;
+        }
+        #hideMessagesBtn {
+            background-color: #42f58d;
         }
     </style>
 </head>
@@ -29,18 +31,18 @@
                 <input type="text" id="dashboardMessage" class="w-full p-2 border rounded" placeholder="فكر فكر">
                 <div id="timeDisplay" class="w-full p-2 border rounded bg-gray-50"></div>
                 <button id="addBtn" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">روح</button>
-                <div id="messagesList" class="mt-4 space-y-2"></div>
-                <button id="deleteBtn"
-                    class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 hidden">طير</button>
-                <button id="cancelBtn"
-                    class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 hidden">كنسل</button>
-                <button id="reAddBtn"
-                    class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 hidden">رجعها</button>
+                <div id="latestMessage" class="mt-4 space-y-2"></div>
+                <button id="deleteBtn" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 hidden">طير</button>
+                <button id="cancelBtn" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 hidden">كنسل</button>
+                <button id="reAddBtn" class="text-white px-4 py-2 rounded hover:bg-green-600 hidden">رجعها</button>
+                <button id="showMessagesBtn" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 hidden">وريني رسايلي</button>
+                <button id="hideMessagesBtn" class="text-white px-4 py-2 rounded hover:bg-blue-600 hidden">خلاص شفتها</button>
             </div>
             <div class="mt-8">
-                <h3 class="text-xl font-bold mb-4">مين قاعد يشوف؟</h3>
+                <h3 id="viewersTitle" class="text-xl font-bold mb-4">مين قاعد يشوف؟</h3>
                 <div id="viewersList" class="space-y-2"></div>
             </div>
+            <div id="allMessages" class="hidden mt-4 space-y-2"></div>
         </div>
     </div>
 
@@ -65,12 +67,17 @@
         let currentMessageIndex = null;
         const timeDisplay = document.getElementById('timeDisplay');
         const dashboardMessage = document.getElementById('dashboardMessage');
-        const messagesList = document.getElementById('messagesList');
+        const latestMessage = document.getElementById('latestMessage');
+        const allMessages = document.getElementById('allMessages');
         const deleteBtn = document.getElementById('deleteBtn');
         const cancelBtn = document.getElementById('cancelBtn');
+        const cancelBtnLastMessage = document.getElementById('cancelBtnLastMessage');
         const reAddBtn = document.getElementById('reAddBtn');
         const addBtn = document.getElementById('addBtn');
         const viewersList = document.getElementById('viewersList');
+        const showMessagesBtn = document.getElementById('showMessagesBtn');
+        const hideMessagesBtn = document.getElementById('hideMessagesBtn');
+        const viewersTitle = document.getElementById('viewersTitle');
 
         // Update time
         setInterval(() => {
@@ -96,13 +103,30 @@
         });
 
         function updateMessagesList() {
-            messagesList.innerHTML = messages.map((msg, idx) => `
-                <div class="p-3 bg-gray-50 rounded ${idx === 0 ? 'border-2 border-blue-500' : ''}">
-                    <div class="font-bold">${msg.text}</div>
-                    <div class="text-sm text-gray-500">${msg.time}</div>
-                    <button class="text-blue-500 hover:text-blue-700 edit-btn" data-index="${idx}">تعديل</button>
-                </div>
-            `).join('');
+            latestMessage.innerHTML = '';
+            allMessages.innerHTML = '';
+            if (messages.length > 0) {
+                const latest = messages[0];
+                latestMessage.innerHTML = `
+                    <div class="p-3 bg-gray-50 rounded border-2 border-blue-500">
+                        <div class="font-bold">${latest.text}</div>
+                        <div class="text-sm text-gray-500">${latest.time}</div>
+                        <button class="text-blue-500 hover:text-blue-700 edit-btn" data-index="0">تعديل</button>
+                    </div>
+                `;
+                if (messages.length > 1) {
+                    showMessagesBtn.classList.remove('hidden');
+                    allMessages.innerHTML = messages.slice(1).map((msg, idx) => `
+                        <div class="p-3 bg-gray-50 rounded">
+                            <div class="font-bold">${msg.text}</div>
+                            <div class="text-sm text-gray-500">${msg.time}</div>
+                            <button id="cancelBtnLastMessage" class="text-blue-500 hover:text-blue-700 edit-btn" data-index="${idx + 1}">تعديل</button>
+                        </div>
+                    `).join('');
+                } else {
+                    showMessagesBtn.classList.add('hidden');
+                }
+            }
         }
 
         // Load messages from Firebase Realtime Database
@@ -111,8 +135,27 @@
             updateMessagesList();
         });
 
+        showMessagesBtn.addEventListener('click', () => {
+            viewersTitle.classList.add('hidden');
+            viewersList.classList.add('hidden');
+            allMessages.classList.remove('hidden');
+            hideMessagesBtn.classList.remove('hidden');
+            showMessagesBtn.classList.add('hidden');
+        });
+
+        hideMessagesBtn.addEventListener('click', () => {
+            viewersTitle.classList.remove('hidden');
+            viewersList.classList.remove('hidden');
+            allMessages.classList.add('hidden');
+            hideMessagesBtn.classList.add('hidden');
+            showMessagesBtn.classList.remove('hidden');
+            deleteBtn.classList.add('hidden');
+            cancelBtn.classList.add('hidden');
+            reAddBtn.classList.add('hidden');
+        });
+
         // Edit message
-        messagesList.addEventListener('click', (e) => {
+        latestMessage.addEventListener('click', (e) => {
             if (e.target.classList.contains('edit-btn')) {
                 const index = e.target.getAttribute('data-index');
                 const message = messages[index];
@@ -124,6 +167,22 @@
                 deleteBtn.classList.remove('hidden');
                 reAddBtn.classList.remove('hidden');
                 addBtn.classList.add('hidden');
+            }
+        });
+
+        allMessages.addEventListener('click', (e) => {
+            if (e.target.classList.contains('edit-btn')) {
+                const index = e.target.getAttribute('data-index');
+                const message = messages[index];
+                dashboardMessage.value = message.text;
+                currentMessageIndex = index;
+                messages.splice(index, 1);
+                updateMessagesList();
+                cancelBtn.classList.remove('hidden');
+                deleteBtn.classList.remove('hidden');
+                reAddBtn.classList.remove('hidden');
+                addBtn.classList.add('hidden');
+                hideMessagesBtn.classList.add('hidden');
             }
         });
 
@@ -164,7 +223,28 @@
             }
         });
 
-        // Cancel edit
+        // // Cancel edit
+        // cancelBtn.addEventListener('click', () => {
+        //     if (currentMessageIndex !== null) {
+        //         const message = dashboardMessage.value;
+        //         const time = new Date().toLocaleString('ar-SA');
+        //         const newMessage = {
+        //             text: message,
+        //             time: time
+        //         };
+        //         messages.splice(currentMessageIndex, 0, newMessage);
+        //         updateMessagesList();
+        //         currentMessageIndex = null;
+        //     }
+        //     dashboardMessage.value = '';
+        //     deleteBtn.classList.add('hidden');
+        //     reAddBtn.classList.add('hidden');
+        //     cancelBtn.classList.add('hidden');
+        //     showMessagesBtn.classList.remove('hidden');
+        //     addBtn.classList.remove('hidden');
+        //     hideMessagesBtn.classList.add('hidden');
+        // });
+
         cancelBtn.addEventListener('click', () => {
             if (currentMessageIndex !== null) {
                 const message = dashboardMessage.value;
@@ -181,9 +261,9 @@
             deleteBtn.classList.add('hidden');
             reAddBtn.classList.add('hidden');
             cancelBtn.classList.add('hidden');
+            showMessagesBtn.classList.add('hidden');
             addBtn.classList.remove('hidden');
-
-            // messagesList.querySelectorAll('.border-2').forEach(el => el.classList.remove('border-2', 'border-blue-500'));
+            hideMessagesBtn.classList.remove('hidden');
         });
 
         function updateViewersList(viewers) {
